@@ -163,7 +163,7 @@ def main():
 
 
     # We list all SVN logs since last time
-    rev_limit = 1
+    rev_limit = 50
     logs = pysvn.Client().log(
         svn_url,
         revision_start=pysvn.Revision(pysvn.opt_revision_kind.number, rev_prev + 1),
