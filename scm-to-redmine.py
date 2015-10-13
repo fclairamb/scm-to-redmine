@@ -159,15 +159,15 @@ def main():
         rev_prev = int(open(".rev_prev", 'r').read())
     else:
         logging.critical("Not having the .rev_prev file is very BAD !!!")
-        # sys.exit(1)
+        sys.exit(1)
 
 
     # We list all SVN logs since last time
-    rev_limit = 50
     logs = pysvn.Client().log(
         svn_url,
         revision_start=pysvn.Revision(pysvn.opt_revision_kind.number, rev_prev + 1),
-        revision_end=pysvn.Revision(pysvn.opt_revision_kind.number, rev_prev + rev_limit)
+        revision_end=pysvn.Revision(pysvn.opt_revision_kind.head),
+        limit=rev_limit
     )
 
     last_rev = None
@@ -314,6 +314,7 @@ if __name__ == '__main__':
     redmine_key = args.redmine_key
     svn_url = args.svn_url
     test_only = args.test_only
+    rev_limit = 10
 
     if not redmine_url:
         logging.critical("Missing the redmine URL")
