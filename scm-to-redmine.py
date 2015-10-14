@@ -165,7 +165,7 @@ def main():
     # We list all SVN logs since last time
     logs = pysvn.Client().log(
         svn_url,
-        revision_start=pysvn.Revision(pysvn.opt_revision_kind.number, rev_prev + 1),
+        revision_start=pysvn.Revision(pysvn.opt_revision_kind.number, rev_prev),
         revision_end=pysvn.Revision(pysvn.opt_revision_kind.head),
         limit=rev_limit
     )
@@ -190,22 +190,24 @@ def main():
             logging.debug("Changes: %s", json.dumps(changes_by_issue))
             for issue_id, changes in changes_by_issue.iteritems():
                 logging.info("Considering update of issue %s ...", issue_id)
-
-                issue = rm.issue.get(issue_id)
-                if not issue:
-                    logging.warning("Issue %s doesn't exist !!!", issue_id)
-                    break
-                else:
-                    msg = "SVN r{rev},".format(rev=revision)
-                    for jl in issue.journals:
-                        logging.debug("    Note: "+jl.notes.replace("\n", ".").replace("\r", "."))
-                        if msg in jl.notes:
-                            logging.warning("There's already a reference to our notes !")
-                            changes = None
-                            break
-                if not test_only and changes:
-                    logging.info("Updating issue %s ...", issue_id)
-                    rm.issue.update(issue_id, **changes)
+                try:
+                    issue = rm.issue.get(issue_id)
+                    if not issue:
+                        logging.warning("Issue %s doesn't exist !!!", issue_id)
+                        break
+                    else:
+                        msg = "SVN r{rev},".format(rev=revision)
+                        for jl in issue.journals:
+                            logging.debug("    Note: "+jl.notes.replace("\n", ".").replace("\r", "."))
+                            if msg in jl.notes:
+                                logging.warning("There's already a reference to our notes !")
+                                changes = None
+                                break
+                    if not test_only and changes:
+                        logging.info("Updating issue %s ...", issue_id)
+                        rm.issue.update(issue_id, **changes)
+                except Exception:
+                    logging.exception("Problem handling issue %s", issue_id)
 
     if last_rev:
         open(".rev_prev.tmp", 'w').write(str(last_rev))
