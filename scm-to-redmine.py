@@ -40,7 +40,7 @@ pattern_hours = re.compile(r"(?i)estimated\s(?:to\s)?([0-9]+)\s?h(?:ours)?")
 pattern_priority = re.compile(r"(?i)(very low|low|normal|high|urgent|immediate) priority")
 pattern_include_diff = re.compile(r"(?i)(?:include|with|want) (?:a\s)?diff")
 pattern_skip = re.compile(r"\*.*")
-patter_diff_files = re.compile(r"^\+{3}\s.*")
+pattern_diff_files = re.compile(r"^\+{3}\s(.*)\t\(revision [0-9]+\)$", re.MULTILINE)
 
 # print "Pattern: "+pattern_text_bugs
 
@@ -137,10 +137,7 @@ def handle_log(message, author=None, rev=None, date=None):
             changes["notes"] = "SVN r{rev}, {date}, {author}: <pre>{message}</pre>" \
                 .format(rev=rev, date=date, author=author, message=message)
 
-            if re.findall(pattern_include_diff, message):
-                # TODO: Move this somewhere else.
-                # This is a bad design, we shouldn't mix the SCM messages parsing code
-                # with the SVN logic around it.
+            if rev:
                 diff = pysvn.Client().diff(
                     '/tmp',
                     svn_url,
@@ -148,9 +145,16 @@ def handle_log(message, author=None, rev=None, date=None):
                     url_or_path2=svn_url,
                     revision2=pysvn.Revision(pysvn.opt_revision_kind.number, rev)
                 )
-                changes["notes"] += "diff: <pre>"+diff+"</pre>"
 
-            #logging.debug("Changing issue %s with %s", issue_id, json.dumps(changes))
+                if re.findall(pattern_include_diff, message):
+                    # TODO: Move this somewhere else.
+                    # This is a bad design, we shouldn't mix the SCM messages parsing code
+                    # with the SVN logic around it.
+                    changes["notes"] += "diff: <pre>"+diff+"</pre>"
+                else:
+                    changes["notes"] += "Modified files are:\n"
+                    for f in re.findall(pattern_diff_files, diff):
+                        changes["notes"] += "* "+f+"\n"
 
             changes_list[issue_id] = changes
 
@@ -312,6 +316,27 @@ class TestCommitMessages(unittest.TestCase):
         changes = handle_log("*Skip anything that follows")
         self.assertIsNone(changes)
 
+    def test_diff_files_search(self):
+        diff = """
+Index: dir1/dir2/file1.ext
+===================================================================
+--- dir1/dir2/file1.ext (revision 4409)
++++ dir1/dir2/file1.ext	(revision 4410)
+@@ -54,13 +54,19 @@
+-    Removed
++    Added
+
+
+Index: dir1/dir2/file2.ext
+===================================================================
+--- dir1/dir2/file2.ext	(revision 4409)
++++ dir1/dir2/file2.ext	(revision 4410)
+@@ -54,13 +54,19 @@
+-    Removed
++    Added
+"""
+        matches = re.findall(pattern_diff_files, diff)
+        self.assertSequenceEqual(["dir1/dir2/file1.ext", "dir1/dir2/file2.ext"], matches)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Parse SVN messages to perform some redmine actions')
