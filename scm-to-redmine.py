@@ -39,6 +39,8 @@ pattern_done = re.compile(r"(?i)(?:(?P<per1>[0-9]+)%\sdone)|(?:(?:done|did)\s(?P
 pattern_hours = re.compile(r"(?i)estimated\s(?:to\s)?([0-9]+)\s?h(?:ours)?")
 pattern_priority = re.compile(r"(?i)(very low|low|normal|high|urgent|immediate) priority")
 pattern_include_diff = re.compile(r"(?i)(?:include|with|want) (?:a\s)?diff")
+pattern_skip = re.compile(r"\*.*")
+patter_diff_files = re.compile(r"^\+{3}\s.*")
 
 # print "Pattern: "+pattern_text_bugs
 
@@ -84,6 +86,10 @@ def get_priority_to_id():
 
 
 def handle_log(message, author=None, rev=None, date=None):
+    # This must be skipped
+    if re.match(pattern_skip, message):
+        return None
+
     matches = re.findall(pattern_bugs, message)
     if matches:
         issues_attr = {}
@@ -160,7 +166,6 @@ def main():
     else:
         logging.critical("Not having the .rev_prev file is very BAD !!!")
         sys.exit(1)
-
 
     # We list all SVN logs since last time
     logs = pysvn.Client().log(
@@ -303,6 +308,11 @@ class TestCommitMessages(unittest.TestCase):
         self.assertTrue(changes.has_key("123"))
         self.assertEquals(changes["123"]["priority_id"], 7)
 
+    def test_issue_dont_consider_me(self):
+        changes = handle_log("*Skip anything that follows")
+        self.assertIsNone(changes)
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Parse SVN messages to perform some redmine actions')
     parser.add_argument('--unit-tests', action='store_true', help='Activate unit tests')
@@ -318,17 +328,17 @@ if __name__ == '__main__':
     test_only = args.test_only
     rev_limit = 10
 
-    if not redmine_url:
-        logging.critical("Missing the redmine URL")
-
-    if not redmine_key:
-        logging.critical("Missing the redmine key")
-
-    if not svn_url:
-        logging.critical("Missing the SVN URL")
-
     if args.unit_tests:
         suite = unittest.TestLoader().loadTestsFromTestCase(TestCommitMessages)
         unittest.TextTestRunner(verbosity=2).run(suite)
     else:
+        if not redmine_url:
+            logging.critical("Missing the redmine URL")
+
+        if not redmine_key:
+            logging.critical("Missing the redmine key")
+
+        if not svn_url:
+            logging.critical("Missing the SVN URL")
+
         main()
