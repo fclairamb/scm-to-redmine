@@ -150,7 +150,7 @@ def handle_log(message, author=None, rev=None, date=None):
                     # TODO: Move this somewhere else.
                     # This is a bad design, we shouldn't mix the SCM messages parsing code
                     # with the SVN logic around it.
-                    changes["notes"] += "diff: <pre>"+diff+"</pre>"
+                    changes["notes"] += "diff: <pre><code class=\"diff\">"+diff+"</code></pre>"
                 else:
                     changes["notes"] += "Modified files are:\n"
                     for f in re.findall(pattern_diff_files, diff):
