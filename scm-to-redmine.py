@@ -353,13 +353,14 @@ if __name__ == '__main__':
     parser.add_argument('--redmine-key', help='Redmine server access key', default=os.environ.get("REDMINE_KEY"))
     parser.add_argument('--svn-url', help='SVN URL', default=os.environ.get("SVN_URL"))
     parser.add_argument('--test-only', action='store_true', help='Do not update redmine')
+    parser.add_argument('--rev-limit', '-l', default=10, help='Number of revision to fetch')
     args = parser.parse_args()
 
     redmine_url = args.redmine_url
     redmine_key = args.redmine_key
     svn_url = args.svn_url
     test_only = args.test_only
-    rev_limit = 10
+    rev_limit = args.rev_limit
 
     if args.unit_tests:
         suite = unittest.TestLoader().loadTestsFromTestCase(TestCommitMessages)
