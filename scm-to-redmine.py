@@ -214,7 +214,15 @@ def main():
                                 break
                     if not test_only and changes:
                         logging.info("Updating issue %s ...", issue_id)
-                        rm.issue.update(issue_id, **changes)
+                        try:
+                            rm.issue.update(issue_id, **changes)
+                        except redmine.ValidationError:
+                            if "status_id" in changes.keys():
+                                logging.info("Removing status change for issue %s", issue_id)
+                                del changes["status_id"]
+                                rm.issue.update(issue_id, **changes)
+                            else:
+                                logging.exception("Our issue wasn't validated %s", issue_id)
                 except Exception:
                     logging.exception("Problem handling issue %s", issue_id)
 
